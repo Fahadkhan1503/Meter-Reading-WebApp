@@ -1,0 +1,167 @@
+const Reading = require('../models/Reading');
+const Meter = require('../models/Meter');
+const extractMeterReading = require('../utils/extractReading');
+
+const createReading = async (req, res) => {
+  try {
+    const { meterId, value, date, note, source } = req.body;
+
+    if (!meterId || value === undefined) {
+      return res.status(400).json({ message: 'meterId and value are required' });
+    }
+
+    const meter = await Meter.findOne({ _id: meterId, user: req.user.id });
+    if (!meter) {
+      return res.status(404).json({ message: 'Meter not found' });
+    }
+
+    const lastReading = await Reading.findOne({ meter: meterId }).sort({ date: -1 });
+
+    if (lastReading && value < lastReading.value) {
+      return res.status(400).json({
+        message: `New reading (${value}) cannot be lower than the last reading (${lastReading.value})`,
+      });
+    }
+
+    const unitsUsed = lastReading ? value - lastReading.value : 0;
+
+    const reading = await Reading.create({
+      meter: meterId,
+      user: req.user.id,
+      value,
+      unitsUsed,
+      date: date || Date.now(),
+      note,
+      source: source === 'photo' ? 'photo' : 'manual',
+    });
+
+    res.status(201).json(reading);
+  } catch (error) {
+    res.status(500).json({ message: 'Could not save reading', error: error.message });
+  }
+};
+
+const scanReading = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Image is required' });
+    }
+
+    const base64Image = req.file.buffer.toString('base64');
+    const extracted = await extractMeterReading(base64Image, req.file.mimetype);
+
+    res.json({
+      extractedValue: extracted.reading,
+      confidence: extracted.confidence,
+      issue: extracted.issue,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Could not read meter from photo', error: error.message });
+  }
+};
+
+const getReadings = async (req, res) => {
+  try {
+    const { meterId, month, year } = req.query;
+
+    if (!meterId) {
+      return res.status(400).json({ message: 'meterId is required' });
+    }
+
+    const meter = await Meter.findOne({ _id: meterId, user: req.user.id });
+    if (!meter) {
+      return res.status(404).json({ message: 'Meter not found' });
+    }
+
+    const filter = { meter: meterId };
+
+    if (month && year) {
+      const start = new Date(year, month - 1, 1);
+      const end = new Date(year, month, 1);
+      filter.date = { $gte: start, $lt: end };
+    }
+
+    const readings = await Reading.find(filter).sort({ date: -1 });
+    res.json(readings);
+  } catch (error) {
+    res.status(500).json({ message: 'Could not fetch readings', error: error.message });
+  }
+};
+
+const getLastReading = async (req, res) => {
+  try {
+    const { meterId } = req.params;
+
+    const meter = await Meter.findOne({ _id: meterId, user: req.user.id });
+    if (!meter) {
+      return res.status(404).json({ message: 'Meter not found' });
+    }
+
+    const lastReading = await Reading.findOne({ meter: meterId }).sort({ date: -1 });
+    res.json(lastReading || null);
+  } catch (error) {
+    res.status(500).json({ message: 'Could not fetch last reading', error: error.message });
+  }
+};
+
+const getMonthlySummary = async (req, res) => {
+  try {
+    const { meterId } = req.params;
+    const { month, year } = req.query;
+
+    const meter = await Meter.findOne({ _id: meterId, user: req.user.id });
+    if (!meter) {
+      return res.status(404).json({ message: 'Meter not found' });
+    }
+
+    const now = new Date();
+    const targetMonth = month ? Number(month) - 1 : now.getMonth();
+    const targetYear = year ? Number(year) : now.getFullYear();
+
+    const start = new Date(targetYear, targetMonth, 1);
+    const end = new Date(targetYear, targetMonth + 1, 1);
+
+    const readings = await Reading.find({
+      meter: meterId,
+      date: { $gte: start, $lt: end },
+    });
+
+    const totalUnitsUsed = readings.reduce((sum, r) => sum + r.unitsUsed, 0);
+
+    res.json({
+      month: targetMonth + 1,
+      year: targetYear,
+      totalUnitsUsed,
+      target: meter.target,
+      overTarget: meter.target > 0 && totalUnitsUsed > meter.target,
+      readingsCount: readings.length,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Could not calculate monthly summary', error: error.message });
+  }
+};
+
+const deleteReading = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const reading = await Reading.findOne({ _id: id, user: req.user.id });
+    if (!reading) {
+      return res.status(404).json({ message: 'Reading not found' });
+    }
+
+    await reading.deleteOne();
+    res.json({ message: 'Reading deleted' });
+  } catch (error) {
+    res.status(500).json({ message: 'Could not delete reading', error: error.message });
+  }
+};
+
+module.exports = {
+  createReading,
+  scanReading,
+  getReadings,
+  getLastReading,
+  getMonthlySummary,
+  deleteReading,
+};
