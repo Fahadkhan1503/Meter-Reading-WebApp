@@ -1,11 +1,11 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
 
 const generateToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
 
-const signup = async (req, res) => {
+export const signup = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
@@ -30,7 +30,7 @@ const signup = async (req, res) => {
   }
 };
 
-const loginUser = async (req, res) => {
+export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -56,7 +56,7 @@ const loginUser = async (req, res) => {
   }
 };
 
-const getMe = async (req, res) => {
+export const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) {
@@ -67,5 +67,3 @@ const getMe = async (req, res) => {
     res.status(500).json({ message: 'Could not fetch user', error: error.message });
   }
 };
-
-module.exports = { signup, loginUser, getMe };

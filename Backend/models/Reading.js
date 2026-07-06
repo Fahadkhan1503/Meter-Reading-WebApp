@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const readingSchema = new mongoose.Schema(
   {
@@ -45,4 +45,4 @@ const readingSchema = new mongoose.Schema(
 
 readingSchema.index({ meter: 1, date: -1 });
 
-module.exports = mongoose.model('Reading', readingSchema);
+export default mongoose.model('Reading', readingSchema);

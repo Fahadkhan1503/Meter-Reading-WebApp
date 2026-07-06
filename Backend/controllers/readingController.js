@@ -1,8 +1,8 @@
-const Reading = require('../models/Reading');
-const Meter = require('../models/Meter');
-const extractMeterReading = require('../utils/extractReading');
+import Reading from '../models/Reading.js';
+import Meter from '../models/Meter.js';
+import extractMeterReading from '../utils/extractReading.js';
 
-const createReading = async (req, res) => {
+export const createReading = async (req, res) => {
   try {
     const { meterId, value, date, note, source } = req.body;
 
@@ -41,7 +41,7 @@ const createReading = async (req, res) => {
   }
 };
 
-const scanReading = async (req, res) => {
+export const scanReading = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'Image is required' });
@@ -60,7 +60,7 @@ const scanReading = async (req, res) => {
   }
 };
 
-const getReadings = async (req, res) => {
+export const getReadings = async (req, res) => {
   try {
     const { meterId, month, year } = req.query;
 
@@ -88,7 +88,7 @@ const getReadings = async (req, res) => {
   }
 };
 
-const getLastReading = async (req, res) => {
+export const getLastReading = async (req, res) => {
   try {
     const { meterId } = req.params;
 
@@ -104,7 +104,7 @@ const getLastReading = async (req, res) => {
   }
 };
 
-const getMonthlySummary = async (req, res) => {
+export const getMonthlySummary = async (req, res) => {
   try {
     const { meterId } = req.params;
     const { month, year } = req.query;
@@ -141,7 +141,7 @@ const getMonthlySummary = async (req, res) => {
   }
 };
 
-const deleteReading = async (req, res) => {
+export const deleteReading = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -155,13 +155,4 @@ const deleteReading = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: 'Could not delete reading', error: error.message });
   }
-};
-
-module.exports = {
-  createReading,
-  scanReading,
-  getReadings,
-  getLastReading,
-  getMonthlySummary,
-  deleteReading,
 };

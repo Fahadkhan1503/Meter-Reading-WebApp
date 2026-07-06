@@ -1,4 +1,4 @@
-const { GoogleGenAI } = require('@google/genai');
+import { GoogleGenAI } from '@google/genai';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -8,7 +8,7 @@ const extractMeterReading = async (base64Image, mimeType) => {
 If the display has red or decimal digits after the black digits, ignore them and return only the black whole number digits.`;
 
   const response = await ai.models.generateContent({
-    model:  "gemini-3.5-flash",
+    model: 'gemini-3.5-flash',
     contents: [prompt, { inlineData: { data: base64Image, mimeType } }],
   });
 
@@ -16,4 +16,4 @@ If the display has red or decimal digits after the black digits, ignore them and
   return JSON.parse(cleaned);
 };
 
-module.exports = extractMeterReading;
+export default extractMeterReading;

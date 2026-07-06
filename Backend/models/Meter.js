@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const meterSchema = new mongoose.Schema(
   {
@@ -33,4 +33,4 @@ const meterSchema = new mongoose.Schema(
 
 meterSchema.index({ user: 1, name: 1 }, { unique: true });
 
-module.exports = mongoose.model('Meter', meterSchema);
+export default mongoose.model('Meter', meterSchema);

@@ -1,7 +1,7 @@
-const Meter = require('../models/Meter');
-const Reading = require('../models/Reading');
+import Meter from '../models/Meter.js';
+import Reading from '../models/Reading.js';
 
-const createMeter = async (req, res) => {
+export const createMeter = async (req, res) => {
   try {
     const { name, meterNumber, target } = req.body;
 
@@ -28,7 +28,7 @@ const createMeter = async (req, res) => {
   }
 };
 
-const getMeters = async (req, res) => {
+export const getMeters = async (req, res) => {
   try {
     const { includeInactive } = req.query;
     const filter = { user: req.user.id };
@@ -43,7 +43,7 @@ const getMeters = async (req, res) => {
   }
 };
 
-const getMeterById = async (req, res) => {
+export const getMeterById = async (req, res) => {
   try {
     const meter = await Meter.findOne({ _id: req.params.id, user: req.user.id });
     if (!meter) {
@@ -55,7 +55,7 @@ const getMeterById = async (req, res) => {
   }
 };
 
-const updateMeter = async (req, res) => {
+export const updateMeter = async (req, res) => {
   try {
     const { name, meterNumber, target, isActive } = req.body;
 
@@ -82,7 +82,7 @@ const updateMeter = async (req, res) => {
   }
 };
 
-const deleteMeter = async (req, res) => {
+export const deleteMeter = async (req, res) => {
   try {
     const meter = await Meter.findOne({ _id: req.params.id, user: req.user.id });
     if (!meter) {
@@ -97,5 +97,3 @@ const deleteMeter = async (req, res) => {
     res.status(500).json({ message: 'Could not delete meter', error: error.message });
   }
 };
-
-module.exports = { createMeter, getMeters, getMeterById, updateMeter, deleteMeter };
