@@ -2,6 +2,11 @@ import Reading from '../models/Reading.js';
 import Meter from '../models/Meter.js';
 import extractMeterReading from '../utils/extractReading.js';
 
+const monthNames = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
 export const createReading = async (req, res) => {
   try {
     const { meterId, value, date, note, source } = req.body;
@@ -23,7 +28,7 @@ export const createReading = async (req, res) => {
       });
     }
 
-    const unitsUsed = lastReading ? value - lastReading.value : 0;
+    const unitsUsed = lastReading ? value - lastReading.value : value - meter.lastBilledReading;
 
     const reading = await Reading.create({
       meter: meterId,
@@ -115,11 +120,11 @@ export const getMonthlySummary = async (req, res) => {
     }
 
     const now = new Date();
-    const targetMonth = month ? Number(month) - 1 : now.getMonth();
+    const targetMonthIndex = month ? Number(month) - 1 : now.getMonth();
     const targetYear = year ? Number(year) : now.getFullYear();
 
-    const start = new Date(targetYear, targetMonth, 1);
-    const end = new Date(targetYear, targetMonth + 1, 1);
+    const start = new Date(targetYear, targetMonthIndex, 1);
+    const end = new Date(targetYear, targetMonthIndex + 1, 1);
 
     const readings = await Reading.find({
       meter: meterId,
@@ -129,7 +134,7 @@ export const getMonthlySummary = async (req, res) => {
     const totalUnitsUsed = readings.reduce((sum, r) => sum + r.unitsUsed, 0);
 
     res.json({
-      month: targetMonth + 1,
+      month: monthNames[targetMonthIndex],
       year: targetYear,
       totalUnitsUsed,
       target: meter.target,
@@ -138,6 +143,50 @@ export const getMonthlySummary = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: 'Could not calculate monthly summary', error: error.message });
+  }
+};
+
+export const getCycleSummary = async (req, res) => {
+  try {
+    const { meterId } = req.params;
+
+    const meter = await Meter.findOne({ _id: meterId, user: req.user.id });
+    if (!meter) {
+      return res.status(404).json({ message: 'Meter not found' });
+    }
+
+    const latestReading = await Reading.findOne({ meter: meterId }).sort({ date: -1 });
+    const currentValue = latestReading ? latestReading.value : meter.lastBilledReading;
+
+    const today = new Date();
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const daysSinceBill = Math.max(0, Math.floor((today - meter.lastBilledDate) / msPerDay));
+    const daysRemaining = Math.max(0, meter.billingCycleDays - daysSinceBill);
+
+    const unitsUsed = currentValue - meter.lastBilledReading;
+    const remainingTarget = meter.target - unitsUsed;
+
+    const userAvgPerDay = daysSinceBill > 0 ? Number((unitsUsed / daysSinceBill).toFixed(2)) : 0;
+    const requiredAvgPerDay = daysRemaining > 0 ? Number((remainingTarget / daysRemaining).toFixed(2)) : null;
+
+    res.json({
+      month: monthNames[today.getMonth()],
+      year: today.getFullYear(),
+      currentReading: currentValue,
+      lastBilledReading: meter.lastBilledReading,
+      lastBilledDate: meter.lastBilledDate,
+      unitsUsed,
+      daysSinceBill,
+      daysRemaining,
+      target: meter.target,
+      remainingTarget,
+      overTarget: meter.target > 0 && unitsUsed > meter.target,
+      userAvgPerDay,
+      requiredAvgPerDay,
+      onTrack: requiredAvgPerDay === null ? null : userAvgPerDay <= requiredAvgPerDay,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Could not calculate cycle summary', error: error.message });
   }
 };
 

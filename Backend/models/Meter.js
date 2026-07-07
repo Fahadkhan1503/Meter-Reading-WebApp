@@ -23,6 +23,20 @@ const meterSchema = new mongoose.Schema(
       default: 0,
       min: [0, 'Target cannot be negative'],
     },
+    lastBilledReading: {
+      type: Number,
+      required: [true, 'Last billed reading value is required'],
+      min: [0, 'Billed reading cannot be negative'],
+    },
+    lastBilledDate: {
+      type: Date,
+      required: [true, 'Last billed reading date is required'],
+    },
+    billingCycleDays: {
+      type: Number,
+      default: 30,
+      min: [1, 'Billing cycle must be at least 1 day'],
+    },
     isActive: {
       type: Boolean,
       default: true,

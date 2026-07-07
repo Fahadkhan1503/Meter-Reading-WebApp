@@ -3,10 +3,32 @@ import Reading from '../models/Reading.js';
 
 export const createMeter = async (req, res) => {
   try {
-    const { name, meterNumber, target } = req.body;
+    const {
+      name,
+      meterNumber,
+      target,
+      currentReading,
+      lastBilledReading,
+      lastBilledDate,
+      billingCycleDays,
+    } = req.body;
 
     if (!name) {
       return res.status(400).json({ message: 'Meter name is required' });
+    }
+    if (currentReading === undefined) {
+      return res.status(400).json({ message: 'Current reading is required' });
+    }
+    if (lastBilledReading === undefined) {
+      return res.status(400).json({ message: 'Last billed reading is required' });
+    }
+    if (!lastBilledDate) {
+      return res.status(400).json({ message: 'Last billed reading date is required' });
+    }
+    if (currentReading < lastBilledReading) {
+      return res.status(400).json({
+        message: `Current reading (${currentReading}) cannot be lower than the last billed reading (${lastBilledReading})`,
+      });
     }
 
     const meter = await Meter.create({
@@ -14,9 +36,21 @@ export const createMeter = async (req, res) => {
       name,
       meterNumber,
       target: target || 0,
+      lastBilledReading,
+      lastBilledDate,
+      billingCycleDays: billingCycleDays || 30,
     });
 
-    res.status(201).json(meter);
+    const firstReading = await Reading.create({
+      meter: meter._id,
+      user: req.user.id,
+      value: currentReading,
+      unitsUsed: currentReading - lastBilledReading,
+      date: Date.now(),
+      source: 'manual',
+    });
+
+    res.status(201).json({ meter, firstReading });
   } catch (error) {
     if (error.code === 11000) {
       return res.status(409).json({ message: 'You already have a meter with this name' });
@@ -37,7 +71,16 @@ export const getMeters = async (req, res) => {
     }
 
     const meters = await Meter.find(filter).sort({ createdAt: -1 });
-    res.json(meters);
+
+    const metersWithReading = await Promise.all(
+      meters.map(async (meter) => {
+        const lastReading = await Reading.findOne({ meter: meter._id }).sort({ date: -1 });
+        const currentReading = lastReading ? lastReading.value : meter.lastBilledReading;
+        return { ...meter.toObject(), currentReading };
+      })
+    );
+
+    res.json(metersWithReading);
   } catch (error) {
     res.status(500).json({ message: 'Could not fetch meters', error: error.message });
   }
@@ -49,7 +92,11 @@ export const getMeterById = async (req, res) => {
     if (!meter) {
       return res.status(404).json({ message: 'Meter not found' });
     }
-    res.json(meter);
+
+    const lastReading = await Reading.findOne({ meter: meter._id }).sort({ date: -1 });
+    const currentReading = lastReading ? lastReading.value : meter.lastBilledReading;
+
+    res.json({ ...meter.toObject(), currentReading });
   } catch (error) {
     res.status(500).json({ message: 'Could not fetch meter', error: error.message });
   }
@@ -57,7 +104,7 @@ export const getMeterById = async (req, res) => {
 
 export const updateMeter = async (req, res) => {
   try {
-    const { name, meterNumber, target, isActive } = req.body;
+    const { name, meterNumber, target, isActive, billingCycleDays } = req.body;
 
     const meter = await Meter.findOne({ _id: req.params.id, user: req.user.id });
     if (!meter) {
@@ -68,6 +115,7 @@ export const updateMeter = async (req, res) => {
     if (meterNumber !== undefined) meter.meterNumber = meterNumber;
     if (target !== undefined) meter.target = target;
     if (isActive !== undefined) meter.isActive = isActive;
+    if (billingCycleDays !== undefined) meter.billingCycleDays = billingCycleDays;
 
     await meter.save();
     res.json(meter);
@@ -96,4 +144,4 @@ export const deleteMeter = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: 'Could not delete meter', error: error.message });
   }
-};
+};  

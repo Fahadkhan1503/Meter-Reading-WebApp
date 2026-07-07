@@ -6,6 +6,7 @@ import {
   getReadings,
   getLastReading,
   getMonthlySummary,
+  getCycleSummary,
   deleteReading,
 } from '../controllers/readingController.js';
 import { protect } from '../middleware/authMiddleware.js';
@@ -51,6 +52,13 @@ router.get('/last/:meterId', protect, getLastReading);
  * @access  Private
  */
 router.get('/summary/:meterId', protect, getMonthlySummary);
+
+/**
+ * @route   GET /api/readings/cycle-summary/:meterId
+ * @desc    Get cycle summary for a meter
+ * @access  Private
+ */
+router.get('/cycle/:meterId', protect, getCycleSummary);
 
 /**
  * @route   DELETE /api/readings/:id
