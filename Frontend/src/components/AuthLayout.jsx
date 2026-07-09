@@ -44,10 +44,10 @@ const BrandPanel = () => (
       <p className="font-mono text-xs uppercase tracking-wider text-primary mb-4">
         // why meterclick
       </p>
-      <h2 className="font-display font-semibold text-[34px] leading-[1.15] mb-4 max-w-[28.75rem]">
+      <h2 className="font-display font-semibold text-[34px] leading-[1.15] mb-4 max-w-115">
         Know your number before the bill does.
       </h2>
-      <p className="text-white/60 text-[15px] leading-relaxed mb-10 max-w-[26.25rem]">
+      <p className="text-white/60 text-[15px] leading-relaxed mb-10 max-w-105">
         Track every meter, watch your daily pace, and catch an overage while
         there is still time to do something about it.
       </p>
@@ -68,7 +68,7 @@ const BrandPanel = () => (
       </ul>
     </div>
 
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 flex items-center gap-4 max-w-[26.25rem]">
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 flex items-center gap-4 max-w-105">
       <svg width="48" height="48" viewBox="0 0 68 68" fill="none" aria-hidden="true">
         <circle cx="34" cy="34" r="26" stroke="rgba(255,255,255,0.1)" strokeWidth="6" />
         <circle
@@ -97,18 +97,21 @@ const BrandPanel = () => (
  * lines so it costs almost no vertical space before the form appears.
  */
 const MobilePitch = () => (
-  <div className="lg:hidden mb-6">
+  <div className="lg:hidden mb-6 bg-ink text-white border border-white/10 rounded-2xl p-5">
     <div className="flex items-center gap-2 mb-5">
-      <DialMark variant="light" />
-      <span className="font-display font-semibold text-sm text-ink tracking-tight">
+      <DialMark/>
+      <span className="font-display font-semibold text-sm text-white tracking-tight">
         MeterClick
       </span>
     </div>
-    <p className="font-display font-semibold text-[19px] text-ink leading-snug mb-1">
+    <p className="font-mono text-xs uppercase tracking-wider text-primary mb-4">
+        // why meterclick
+    </p>
+    <p className="font-display font-semibold text-[19px] text-white leading-snug mb-3">
       Know your number before the bill does.
     </p>
-    <p className="text-ink-soft text-[13px] leading-relaxed">
-      Log readings, track your pace, and catch overages before the invoice
+    <p className="text-white/60 text-[13px] leading-relaxed">
+      Capture readings, track your pace, and catch overages before the invoice
       arrives.
     </p>
   </div>
