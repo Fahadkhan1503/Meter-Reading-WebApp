@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AuthLayout from '../components/AuthLayout';
+import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 
-const inputClasses =
-  'w-full border border-line rounded-[10px] px-3 py-2.5 text-ink placeholder:text-ink-soft/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition';
+const fieldClasses =
+  'w-full bg-surface rounded-2xl pl-11 pr-4 py-3 text-sm text-ink placeholder:text-ink-soft/70 focus:outline-none focus:ring-2 focus:ring-primary/30 transition';
+
+const iconClasses = 'w-[18px] h-[18px] absolute left-4 top-1/2 -translate-y-1/2 text-ink-soft pointer-events-none';
 
 const Signup = () => {
   const { signup } = useAuth();
@@ -13,6 +16,7 @@ const Signup = () => {
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -52,20 +56,15 @@ const Signup = () => {
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
         {error && (
-          <div
-            role="alert"
-            className="bg-danger-light text-danger text-sm rounded-[10px] px-3 py-2.5"
-          >
+          <div role="alert" className="bg-danger-light text-danger text-sm rounded-2xl px-3 py-2.5">
             {error}
           </div>
         )}
 
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-ink-soft mb-1.5">
-            Name
-          </label>
+        <div className="relative">
+          <User className={iconClasses} />
           <input
             id="name"
             name="name"
@@ -73,52 +72,60 @@ const Signup = () => {
             autoComplete="name"
             required
             minLength={2}
+            aria-label="Name"
             value={form.name}
             onChange={handleChange}
-            className={inputClasses}
-            placeholder="Jordan Blake"
+            placeholder="Name"
+            className={fieldClasses}
           />
         </div>
 
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-ink-soft mb-1.5">
-            Email
-          </label>
+        <div className="relative">
+         <Mail className={iconClasses} />
           <input
             id="email"
             name="email"
             type="email"
             autoComplete="email"
             required
+            aria-label="Email"
             value={form.email}
             onChange={handleChange}
-            className={inputClasses}
-            placeholder="you@example.com"
+            placeholder="Email"
+            className={fieldClasses}
           />
         </div>
 
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-ink-soft mb-1.5">
-            Password
-          </label>
+        <div className="relative">
+          <Lock className={iconClasses} />
           <input
             id="password"
             name="password"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             autoComplete="new-password"
             required
             minLength={6}
+            aria-label="Password"
             value={form.password}
             onChange={handleChange}
-            className={inputClasses}
-            placeholder="At least 6 characters"
+            placeholder="Password (min. 6 characters)"
+            className={`${fieldClasses} pr-11`}
           />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            aria-pressed={showPassword}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-soft hover:text-ink transition"
+          >
+            {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
+          </button>
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="mt-2 w-full bg-primary text-white font-medium rounded-[10px] py-2.5 hover:bg-primary-dark transition disabled:opacity-60 disabled:cursor-not-allowed"
+          className="mt-1.5 w-full bg-primary text-white font-medium rounded-2xl py-3 hover:bg-primary-dark transition disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {loading ? 'Creating account…' : 'Create account'}
         </button>
