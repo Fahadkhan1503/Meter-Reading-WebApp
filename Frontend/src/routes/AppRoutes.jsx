@@ -1,17 +1,23 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from '../pages/Login';
 import Signup from '../pages/Signup';
+import Dashboard from '../pages/Dashboard';
+import ProtectedRoute from './ProtectedRoute';
 
-/**
- * Only auth routes exist so far. Once Dashboard, Meters, etc. are built,
- * "/" and other protected routes will render through ProtectedRoute here,
- * and the catch-all will point at a real NotFound page instead of /login.
- */
 const AppRoutes = () => {
   return (
     <Routes>
+      <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

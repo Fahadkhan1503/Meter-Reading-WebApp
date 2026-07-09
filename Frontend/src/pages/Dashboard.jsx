@@ -5,8 +5,9 @@ import { getCycleSummary, getReadings } from '../services/readingService';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import CycleDial from '../components/CycleDial';
-import { Plus,ChevronDown  } from 'lucide-react';
-import CustomSelect from '../components/CustomSelect';
+import CustomSelect from '../components/CustomSelect'; // 👈 new import
+import { Plus } from 'lucide-react';
+
 const Dashboard = () => {
   const [meters, setMeters] = useState([]);
   const [selectedMeterId, setSelectedMeterId] = useState(null);
@@ -96,6 +97,9 @@ const Dashboard = () => {
   const dialStatus = cycle?.overTarget ? 'danger' : 'success';
   const paceStatus = cycle?.onTrack === false ? 'danger' : 'success';
 
+  // Prepare options for custom select
+  const meterOptions = meters.map((m) => ({ value: m._id, label: m.name }));
+
   return (
     <div className="min-h-screen bg-surface">
       <Navbar />
@@ -103,18 +107,14 @@ const Dashboard = () => {
         <Sidebar />
         <div className="flex-1 min-w-0 px-4 py-6 sm:px-6 lg:px-8">
           {/* Top section: meter selector and add button */}
-          <div className="flex items-center justify-between mb-6">
-            {meters.length > 1 ? (
-              <CustomSelect
-                    options={meters.map((m) => ({ value: m._id, label: m.name }))}
-                    value={selectedMeterId}
-                    onChange={(val) => setSelectedMeterId(val)}
-                    placeholder="Select a meter"
-                    />
-            ) : (
-              <span className="text-sm text-ink-soft">1 meter tracked</span>
-            )}
-            <Link to="/meters/new" className="text-sm text-primary font-medium hover:text-primary-dark lg:hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+            <CustomSelect
+              options={meterOptions}
+              value={selectedMeterId}
+              onChange={(val) => setSelectedMeterId(val)}
+              placeholder="Select a meter"
+            />
+            <Link to="/meters/new" className="text-sm text-primary font-medium hover:text-primary-dark lg:hidden whitespace-nowrap">
               + Add meter
             </Link>
           </div>
@@ -128,9 +128,9 @@ const Dashboard = () => {
           {loadingCycle || !cycle ? (
             <div className="text-sm text-ink-soft">Loading cycle data...</div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6 items-start">
-                
-              {/* Cycle dial card */}
+            // 👇 Changed here: single column, full width, stacked vertically
+            <div className="grid grid-cols-1 gap-6">
+              {/* Cycle dial card – full width */}
               <div className="bg-paper border border-line rounded-[20px] p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
@@ -169,7 +169,7 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {/* Recent readings */}
+              {/* Recent readings card – full width */}
               <div className="bg-paper border border-line rounded-[20px] p-6">
                 <p className="font-display font-semibold text-sm text-ink-soft mb-4">Recent readings</p>
                 {readings.length === 0 ? (
@@ -189,7 +189,6 @@ const Dashboard = () => {
                   ))
                 )}
               </div>
-
             </div>
           )}
         </div>
