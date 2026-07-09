@@ -30,30 +30,31 @@ const FeatureRow = ({ title, text }) => (
 );
 
 /**
- * Desktop-only brand panel: explains what MeterClick does so the auth
+ *  brand panel: explains what MeterClick does so the auth
  * screen doesn't read as an empty form. Hidden below the lg breakpoint,
  * where the form panel's own compact header carries the branding instead.
  */
 const BrandPanel = () => (
-  <div className="hidden lg:flex flex-col justify-between bg-ink text-white px-14 py-12">
+  // <div className="flex flex-col justify-between bg-ink text-white px-6 py-8 sm:px-8 lg:px-14 lg:py-12">
+    <div className="hidden lg:flex flex-col justify-between bg-ink text-white px-6 py-8 sm:px-8 lg:px-14 lg:py-12">
     <div className="flex items-center gap-2.5">
       <DialMark variant="dark" />
       <span className="font-display font-semibold text-lg tracking-tight">MeterClick</span>
     </div>
 
-    <div>
+    <div className="mt-8 lg:mt-0">
       <p className="font-mono text-xs uppercase tracking-wider text-primary mb-4">
         // why meterclick
       </p>
-      <h2 className="font-display font-semibold text-[34px] leading-[1.15] mb-4 max-w-[380px]">
+      <h2 className="font-display font-semibold text-[28px] sm:text-[32px] lg:text-[34px] leading-[1.15] mb-4 max-w-[26.25rem] lg:max-w-[28.75rem]">
         Know your number before the bill does.
       </h2>
-      <p className="text-white/60 text-[15px] leading-relaxed mb-10 max-w-[380px]">
+      <p className="text-white/60 text-[15px] leading-relaxed mb-8 sm:mb-10 max-w-[26.25rem] lg:max-w-[28.75rem]">
         Track every meter, watch your daily pace, and catch an overage while
         there is still time to do something about it.
       </p>
 
-      <ul className="flex flex-col gap-5 mb-10">
+      <ul className="flex flex-col gap-5 mb-8 sm:mb-10">
         <FeatureRow
           title="Log a reading in seconds"
           text="Type it in, or snap a photo and let MeterClick read the number for you."
@@ -69,7 +70,7 @@ const BrandPanel = () => (
       </ul>
     </div>
 
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 flex items-center gap-4 max-w-[380px]">
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 flex items-center gap-4 max-w-[26.25rem] lg:max-w-[28.75rem]">
       <svg width="52" height="52" viewBox="0 0 68 68" fill="none" aria-hidden="true">
         <circle cx="34" cy="34" r="26" stroke="rgba(255,255,255,0.1)" strokeWidth="6" />
         <circle
@@ -98,11 +99,11 @@ const BrandPanel = () => (
  */
 const AuthLayout = ({ eyebrow, title, subtitle, children, footer }) => {
   return (
-    <div className="min-h-screen grid lg:grid-cols-2">
+    <div className="min-h-screen grid lg:grid-cols-[55%_45%]">
       <BrandPanel />
 
-      <div className="flex flex-col bg-surface px-6 py-10 lg:py-12">
-        <div className="flex lg:hidden items-center justify-center gap-2 mb-8">
+      <div className="flex flex-col bg-surface px-4 py-6 sm:px-6 sm:py-8 lg:px-8 xl:px-10 lg:py-12">
+        <div className="flex lg:hidden items-center justify-center gap-2 mb-6 sm:mb-8">
           <DialMark />
           <span className="font-display font-semibold text-base text-ink tracking-tight">
             MeterClick
@@ -111,7 +112,7 @@ const AuthLayout = ({ eyebrow, title, subtitle, children, footer }) => {
 
         <div className="flex-1 flex items-center justify-center">
           <div
-            className="w-full max-w-[420px] bg-paper border border-line rounded-[20px] px-8 py-10"
+            className="w-full max-w-[27.5rem] sm:max-w-[29.375rem] lg:max-w-[26.875rem] xl:max-w-[28.75rem] bg-paper border border-line rounded-[20px] px-6 py-8 sm:px-8 sm:py-10"
             style={{
               boxShadow: '0 10px 15px -3px rgba(28,27,26,0.06), 0 4px 6px -2px rgba(28,27,26,0.03)',
             }}
