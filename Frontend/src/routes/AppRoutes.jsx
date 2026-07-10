@@ -6,6 +6,7 @@ import Dashboard from '../pages/Dashboard';
 import CreateMeter from '../pages/CreateMeter';
 import ProtectedRoute from './ProtectedRoute';
 import Meters from '../pages/Meters';
+import AddReading from '../pages/AddReading';
 // import MeterDetail from '../pages/MeterDetail';
 
 /**
@@ -27,9 +28,9 @@ const AppRoutes = () => {
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/meters/new" element={<ProtectedRoute><CreateMeter /></ProtectedRoute>} />
       <Route path="/meters" element={<ProtectedRoute><Meters /></ProtectedRoute>} />
-      {/* <Route path="/meters/:id" element={<ProtectedRoute><MeterDetail /></ProtectedRoute>} /> */}
+      <Route path="/readings/new" element={<ProtectedRoute><AddReading /></ProtectedRoute>} />
       {/*
-        /meters, /meters/new, /meters/:id, /readings/new don't exist yet —
+        / /meters/new, /meters/:id, don't exist yet —
         Dashboard and Sidebar already link to them, they'll just 404 to
         /login until those pages are built.
       */}
