@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { getMeters, deleteMeter } from "../services/meterService";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
-import { Plus, Eye, Edit, Trash2, Loader2,Pencil } from "lucide-react";
+import { Plus, Eye, Edit, Trash2, Loader2,Pencil,Camera } from "lucide-react";
 
 const Meters = () => {
   const [meters, setMeters] = useState([]);
@@ -188,14 +188,18 @@ const Meters = () => {
                                 })}
                             </span>
                             <span
-                                className="text-xs px-1.5 py-0.5 rounded-full"
-                                style={{
-                                backgroundColor: "#6366f118",
-                                color: "#6366f1",
-                                }}
-                            >
-                                <Pencil size={16} />
-                            </span>
+                            className="text-xs px-1.5 py-0.5 rounded-full"
+                            style={{
+                              backgroundColor: "#6366f118",
+                              color: "#6366f1",
+                            }}
+                          >
+                            {meter.lastReadingSource === "photo" ? (
+                              <Camera size={16} />
+                            ) : (
+                              <Pencil size={16} />
+                            )}
+                          </span>
                             </div>
                         </div>
                         <div className="text-2xl font-bold text-ink tabular-nums ">

@@ -76,7 +76,8 @@ export const getMeters = async (req, res) => {
       meters.map(async (meter) => {
         const lastReading = await Reading.findOne({ meter: meter._id }).sort({ date: -1 });
         const currentReading = lastReading ? lastReading.value : meter.lastBilledReading;
-        return { ...meter.toObject(), currentReading };
+        const lastReadingSource = lastReading ? lastReading.source : 'manual';
+        return { ...meter.toObject(), currentReading, lastReadingSource };
       })
     );
 
@@ -95,8 +96,8 @@ export const getMeterById = async (req, res) => {
 
     const lastReading = await Reading.findOne({ meter: meter._id }).sort({ date: -1 });
     const currentReading = lastReading ? lastReading.value : meter.lastBilledReading;
-
-    res.json({ ...meter.toObject(), currentReading });
+    const lastReadingSource = lastReading ? lastReading.source : 'manual';
+    res.json({ ...meter.toObject(), currentReading, lastReadingSource });
   } catch (error) {
     res.status(500).json({ message: 'Could not fetch meter', error: error.message });
   }
