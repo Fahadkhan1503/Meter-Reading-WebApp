@@ -118,7 +118,7 @@ const Signup = () => {
             aria-pressed={showPassword}
             className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-soft hover:text-ink transition"
           >
-            {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
+            {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
           </button>
         </div>
 
