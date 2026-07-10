@@ -4,6 +4,7 @@ import { NavLink, Link, useNavigate } from 'react-router-dom'; // 👈 加上 us
 import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, Gauge, LogOut, Plus, X } from 'lucide-react';
 
+
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/meters', label: 'Meters', icon: Gauge },
