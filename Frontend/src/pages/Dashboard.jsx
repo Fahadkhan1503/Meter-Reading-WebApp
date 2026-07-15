@@ -9,38 +9,61 @@ import CustomSelect from '../components/CustomSelect';
 import UsageGraph from '../components/UsageGraph';
 import { Plus } from 'lucide-react';
 
+const msPerDay = 1000 * 60 * 60 * 24;
+
 const formatDate = (date) =>
   new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 
-const msPerDay = 1000 * 60 * 60 * 24;
-
-const groupReadingsByCycle = (readings, anchorDate, cycleDays) => {
+const groupReadingsByCycle = (readings, anchorDate, anchorValue, cycleDays) => {
   if (!anchorDate || readings.length === 0) return [];
 
   const anchor = new Date(anchorDate).getTime();
-  const groups = new Map();
 
+  const getWindowIndex = (date) => {
+    const dayNumber = Math.floor((new Date(date).getTime() - anchor) / msPerDay);
+    return dayNumber <= 0 ? 0 : Math.floor((dayNumber - 1) / cycleDays);
+  };
+
+  const rawGroups = new Map();
   readings.forEach((r) => {
-    const readingTime = new Date(r.date).getTime();
-    const windowIndex = Math.floor((readingTime - anchor) / (cycleDays * msPerDay));
-    if (!groups.has(windowIndex)) groups.set(windowIndex, []);
-    groups.get(windowIndex).push(r);
+    const windowIndex = getWindowIndex(r.date);
+    if (!rawGroups.has(windowIndex)) rawGroups.set(windowIndex, []);
+    rawGroups.get(windowIndex).push(r);
   });
 
-  return Array.from(groups.entries())
-    .sort((a, b) => b[0] - a[0])
-    .map(([windowIndex, groupReadings]) => {
-      const start = new Date(anchor + windowIndex * cycleDays * msPerDay);
-      const end = new Date(anchor + (windowIndex + 1) * cycleDays * msPerDay);
-      const monthName = end.toLocaleDateString('en-GB', { month: 'long' });
-      const rangeLabel = `${formatDate(start)} - ${formatDate(end)}`;
-      return {
-        key: windowIndex,
-        title: `${monthName} readings`,
-        subtitle: rangeLabel,
-        readings: groupReadings,
-      };
+  const sortedIndexes = Array.from(rawGroups.keys()).sort((a, b) => a - b);
+
+  let runningBaseline = anchorValue;
+  const groups = sortedIndexes.map((windowIndex) => {
+    const chronological = [...rawGroups.get(windowIndex)].sort(
+      (a, b) => new Date(a.date) - new Date(b.date)
+    );
+
+    const groupBaseline = runningBaseline;
+    let chainValue = groupBaseline;
+    const withDelta = chronological.map((r) => {
+      const displayDelta = r.value - chainValue;
+      chainValue = r.value;
+      return { ...r, displayDelta };
     });
+
+    runningBaseline = chronological[chronological.length - 1].value;
+
+    const start = new Date(anchor + windowIndex * cycleDays * msPerDay);
+    const end = new Date(anchor + (windowIndex + 1) * cycleDays * msPerDay);
+    const monthName = end.toLocaleDateString('en-GB', { month: 'long' });
+    const total = chronological[chronological.length - 1].value - groupBaseline;
+
+    return {
+      key: windowIndex,
+      title: `${monthName} readings`,
+      subtitle: `${formatDate(start)} - ${formatDate(end)}`,
+      total,
+      readings: withDelta.reverse(),
+    };
+  });
+
+  return groups.reverse();
 };
 
 const Dashboard = () => {
@@ -118,7 +141,7 @@ const Dashboard = () => {
             <img
             src="/no_meter.png"
             alt="No meters illustration"
-            className="mx-auto mb-8 w-80 sm:w-96 md:w-[28rem] max-w-full h-auto object-contain"
+            className="mx-auto mb-8 w-80 sm:w-96 md:w-md max-w-full h-auto object-contain"
           />
             <h1 className="font-display font-semibold text-2xl text-ink mb-2">No meters yet</h1>
             <p className="text-ink-soft mb-6">
@@ -143,7 +166,9 @@ const Dashboard = () => {
 
   const billingCycleDays = selectedMeter?.billingCycleDays || 30;
   const nextBillDate = cycle ? new Date(new Date(cycle.lastBilledDate).getTime() + billingCycleDays * msPerDay) : null;
-  const readingGroups = cycle ? groupReadingsByCycle(readings, cycle.lastBilledDate, billingCycleDays) : [];
+  const readingGroups = selectedMeter
+    ? groupReadingsByCycle(readings, selectedMeter.lastBilledDate, selectedMeter.lastBilledReading, billingCycleDays)
+    : [];
 
   const meterOptions = meters.map((m) => ({ value: m._id, label: m.name }));
 
@@ -265,8 +290,11 @@ const Dashboard = () => {
                   readingGroups.map((group) => (
                     <div key={group.key} className="mb-5 last:mb-0">
                       <div className="flex items-baseline justify-between mb-1.5">
-                        <p className="text-sm font-medium text-ink">{group.title}</p>
-                        <p className="text-xs text-ink-soft">{group.subtitle}</p>
+                        <div>
+                          <p className="text-sm font-medium text-ink">{group.title}</p>
+                          <p className="text-xs text-ink-soft">{group.subtitle}</p>
+                        </div>
+                        <p className="font-display text-lg font-bold text-ink tabular-nums">{group.total} units</p>
                       </div>
                       {group.readings.map((r) => (
                         <div
@@ -276,7 +304,7 @@ const Dashboard = () => {
                           <span className="text-ink-soft">{new Date(r.date).toLocaleDateString()}</span>
                           <span className="font-mono font-bold text-ink">{r.value}</span>
                           <span className="font-mono text-xs text-primary-dark bg-primary-light px-2 py-0.5 rounded-full">
-                            +{r.unitsUsed}
+                            +{r.displayDelta}
                           </span>
                         </div>
                       ))}

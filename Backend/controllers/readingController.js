@@ -204,6 +204,49 @@ export const getMonthlySummary = async (req, res) => {
   }
 };
 
+// export const getCycleSummary = async (req, res) => {
+//   try {
+//     const { meterId } = req.params;
+
+//     const meter = await Meter.findOne({ _id: meterId, user: req.user.id });
+//     if (!meter) {
+//       return res.status(404).json({ message: 'Meter not found' });
+//     }
+
+//     const latestReading = await Reading.findOne({ meter: meterId }).sort({ date: -1 });
+//     const currentValue = latestReading ? latestReading.value : meter.lastBilledReading;
+
+//     const today = new Date();
+//     const msPerDay = 1000 * 60 * 60 * 24;
+//     const daysSinceBill = Math.max(0, Math.floor((today - meter.lastBilledDate) / msPerDay));
+//     const daysRemaining = Math.max(0, meter.billingCycleDays - daysSinceBill);
+
+//     const unitsUsed = currentValue - meter.lastBilledReading;
+//     const remainingTarget = meter.target - unitsUsed;
+
+//     const userAvgPerDay = daysSinceBill > 0 ? Number((unitsUsed / daysSinceBill).toFixed(2)) : 0;
+//     const requiredAvgPerDay = daysRemaining > 0 ? Number((remainingTarget / daysRemaining).toFixed(2)) : null;
+
+//     res.json({
+//       month: monthNames[today.getMonth()],
+//       year: today.getFullYear(),
+//       currentReading: currentValue,
+//       lastBilledReading: meter.lastBilledReading,
+//       lastBilledDate: meter.lastBilledDate,
+//       unitsUsed,
+//       daysSinceBill,
+//       daysRemaining,
+//       target: meter.target,
+//       remainingTarget,
+//       overTarget: meter.target > 0 && unitsUsed > meter.target,
+//       userAvgPerDay,
+//       requiredAvgPerDay,
+//       onTrack: requiredAvgPerDay === null ? null : userAvgPerDay <= requiredAvgPerDay,
+//     });
+//   } catch (error) {
+//     res.status(500).json({ message: 'Could not calculate cycle summary', error: error.message });
+//   }
+// };
 export const getCycleSummary = async (req, res) => {
   try {
     const { meterId } = req.params;
@@ -213,15 +256,37 @@ export const getCycleSummary = async (req, res) => {
       return res.status(404).json({ message: 'Meter not found' });
     }
 
-    const latestReading = await Reading.findOne({ meter: meterId }).sort({ date: -1 });
-    const currentValue = latestReading ? latestReading.value : meter.lastBilledReading;
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const cycleDays = meter.billingCycleDays || 30;
+    const anchor = meter.lastBilledDate.getTime();
+
+    const getWindowIndex = (date) => {
+      const dayNumber = Math.floor((new Date(date).getTime() - anchor) / msPerDay);
+      return dayNumber <= 0 ? 0 : Math.floor((dayNumber - 1) / cycleDays);
+    };
+
+    const allReadings = await Reading.find({ meter: meterId }).sort({ date: -1 });
+    const currentWindowIndex = getWindowIndex(Date.now());
+
+    let baselineValue = meter.lastBilledReading;
+    let baselineDate = meter.lastBilledDate;
+
+    if (currentWindowIndex > 0) {
+      const closingReading = allReadings.find((r) => getWindowIndex(r.date) < currentWindowIndex);
+      if (closingReading) {
+        baselineValue = closingReading.value;
+      }
+      baselineDate = new Date(anchor + currentWindowIndex * cycleDays * msPerDay);
+    }
+
+    const latestReading = allReadings[0];
+    const currentValue = latestReading ? latestReading.value : baselineValue;
 
     const today = new Date();
-    const msPerDay = 1000 * 60 * 60 * 24;
-    const daysSinceBill = Math.max(0, Math.floor((today - meter.lastBilledDate) / msPerDay));
-    const daysRemaining = Math.max(0, meter.billingCycleDays - daysSinceBill);
+    const daysSinceBill = Math.max(0, Math.floor((today - baselineDate) / msPerDay));
+    const daysRemaining = Math.max(0, cycleDays - daysSinceBill);
 
-    const unitsUsed = currentValue - meter.lastBilledReading;
+    const unitsUsed = Math.max(0, currentValue - baselineValue);
     const remainingTarget = meter.target - unitsUsed;
 
     const userAvgPerDay = daysSinceBill > 0 ? Number((unitsUsed / daysSinceBill).toFixed(2)) : 0;
@@ -231,8 +296,8 @@ export const getCycleSummary = async (req, res) => {
       month: monthNames[today.getMonth()],
       year: today.getFullYear(),
       currentReading: currentValue,
-      lastBilledReading: meter.lastBilledReading,
-      lastBilledDate: meter.lastBilledDate,
+      lastBilledReading: baselineValue,
+      lastBilledDate: baselineDate,
       unitsUsed,
       daysSinceBill,
       daysRemaining,
