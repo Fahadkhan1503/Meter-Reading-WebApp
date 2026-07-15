@@ -237,8 +237,8 @@ const AddReading = () => {
       <Navbar onMenuClick={toggleSidebar} />
       <div className="flex">
         <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
-        <div className="flex-1 min-w-0 px-4 py-6 sm:px-6 lg:px-8">
-          <div className="max-w-2xl lg:max-w-5xl mx-auto">
+        <div className="flex-1 min-w-0 px-4 py-6 sm:px-6 lg:px-4">
+          <div className="mx-auto">
             <Link
               to="/meters"
               className="inline-flex items-center gap-1.5 text-sm text-ink-soft hover:text-ink transition mb-4"

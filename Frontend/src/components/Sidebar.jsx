@@ -103,7 +103,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       {/* Sidebar */}
       <aside
         className={`
-          fixed lg:static inset-y-0 left-0 z-50 w-60 shrink-0
+          fixed lg:sticky lg:top-16 inset-y-0 left-0 z-50 w-60 shrink-0
           bg-paper border-r border-line px-4 py-4
           transition-transform duration-300 ease-in-out
           flex flex-col
