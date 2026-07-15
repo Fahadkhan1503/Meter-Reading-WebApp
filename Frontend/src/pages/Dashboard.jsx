@@ -12,6 +12,37 @@ import { Plus } from 'lucide-react';
 const formatDate = (date) =>
   new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 
+const msPerDay = 1000 * 60 * 60 * 24;
+
+const groupReadingsByCycle = (readings, anchorDate, cycleDays) => {
+  if (!anchorDate || readings.length === 0) return [];
+
+  const anchor = new Date(anchorDate).getTime();
+  const groups = new Map();
+
+  readings.forEach((r) => {
+    const readingTime = new Date(r.date).getTime();
+    const windowIndex = Math.floor((readingTime - anchor) / (cycleDays * msPerDay));
+    if (!groups.has(windowIndex)) groups.set(windowIndex, []);
+    groups.get(windowIndex).push(r);
+  });
+
+  return Array.from(groups.entries())
+    .sort((a, b) => b[0] - a[0])
+    .map(([windowIndex, groupReadings]) => {
+      const start = new Date(anchor + windowIndex * cycleDays * msPerDay);
+      const end = new Date(anchor + (windowIndex + 1) * cycleDays * msPerDay);
+      const monthName = end.toLocaleDateString('en-GB', { month: 'long' });
+      const rangeLabel = `${formatDate(start)} - ${formatDate(end)}`;
+      return {
+        key: windowIndex,
+        title: `${monthName} readings`,
+        subtitle: rangeLabel,
+        readings: groupReadings,
+      };
+    });
+};
+
 const Dashboard = () => {
   const [meters, setMeters] = useState([]);
   const [selectedMeterId, setSelectedMeterId] = useState(null);
@@ -111,8 +142,8 @@ const Dashboard = () => {
   const paceStatus = cycle?.onTrack === false ? 'danger' : 'success';
 
   const billingCycleDays = selectedMeter?.billingCycleDays || 30;
-  const msPerDay = 1000 * 60 * 60 * 24;
   const nextBillDate = cycle ? new Date(new Date(cycle.lastBilledDate).getTime() + billingCycleDays * msPerDay) : null;
+  const readingGroups = cycle ? groupReadingsByCycle(readings, cycle.lastBilledDate, billingCycleDays) : [];
 
   const meterOptions = meters.map((m) => ({ value: m._id, label: m.name }));
 
@@ -228,19 +259,27 @@ const Dashboard = () => {
               {/* Recent readings card */}
               <div className="bg-paper border border-line rounded-[20px] p-6">
                 <p className="font-display font-semibold text-sm text-ink-soft mb-4">Recent readings</p>
-                {readings.length === 0 ? (
+                {readingGroups.length === 0 ? (
                   <p className="text-sm text-ink-soft">No readings logged yet.</p>
                 ) : (
-                  readings.slice(0, 5).map((r) => (
-                    <div
-                      key={r._id}
-                      className="flex items-center justify-between py-2.5 border-t border-line first:border-t-0 text-sm"
-                    >
-                      <span className="text-ink-soft">{new Date(r.date).toLocaleDateString()}</span>
-                      <span className="font-mono font-bold text-ink">{r.value}</span>
-                      <span className="font-mono text-xs text-primary-dark bg-primary-light px-2 py-0.5 rounded-full">
-                        +{r.unitsUsed}
-                      </span>
+                  readingGroups.map((group) => (
+                    <div key={group.key} className="mb-5 last:mb-0">
+                      <div className="flex items-baseline justify-between mb-1.5">
+                        <p className="text-sm font-medium text-ink">{group.title}</p>
+                        <p className="text-xs text-ink-soft">{group.subtitle}</p>
+                      </div>
+                      {group.readings.map((r) => (
+                        <div
+                          key={r._id}
+                          className="flex items-center justify-between py-2.5 border-t border-line first:border-t-0 text-sm"
+                        >
+                          <span className="text-ink-soft">{new Date(r.date).toLocaleDateString()}</span>
+                          <span className="font-mono font-bold text-ink">{r.value}</span>
+                          <span className="font-mono text-xs text-primary-dark bg-primary-light px-2 py-0.5 rounded-full">
+                            +{r.unitsUsed}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   ))
                 )}
