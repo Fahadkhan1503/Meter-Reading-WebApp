@@ -84,6 +84,11 @@ const Dashboard = () => {
         <div className="flex">
           <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
           <div className="flex-1 min-w-0 px-4 py-16 text-center">
+            <img
+            src="/no_meter.png"
+            alt="No meters illustration"
+            className="mx-auto mb-8 w-80 sm:w-96 md:w-[28rem] max-w-full h-auto object-contain"
+          />
             <h1 className="font-display font-semibold text-2xl text-ink mb-2">No meters yet</h1>
             <p className="text-ink-soft mb-6">
               Add your first meter with its last billed reading, and MeterClick starts tracking from there.
