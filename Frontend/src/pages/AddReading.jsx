@@ -108,17 +108,39 @@ const AddReading = () => {
       .sort((a, b) => new Date(a.date) - new Date(b.date));
     return laterReadings[0] || null;
   };
+  const getPreviousReading = (date) => {
+  const selected = new Date(date);
+  const earlierReadings = allReadings
+    .filter((r) => new Date(r.date) < selected)
+    .sort((a, b) => new Date(b.date) - new Date(a.date)); // newest first
+  return earlierReadings[0] || null;
+};
 
+  // const validatePastReading = (date, val) => {
+  //   if (!date || !val) return null;
+
+  //   const nextReading = getNextReading(date);
+  //   if (nextReading && Number(val) > nextReading.value) {
+  //     return `Cannot be higher than the reading on ${formatDate(nextReading.date)} (${nextReading.value})`;
+  //   }
+  //   return null;
+  // };
   const validatePastReading = (date, val) => {
-    if (!date || !val) return null;
+  if (!date || !val) return null;
 
-    const nextReading = getNextReading(date);
-    if (nextReading && Number(val) > nextReading.value) {
-      return `Cannot be higher than the reading on ${formatDate(nextReading.date)} (${nextReading.value})`;
-    }
-    return null;
-  };
+  const numVal = Number(val);
+  const nextReading = getNextReading(date);
+  if (nextReading && numVal > nextReading.value) {
+    return `Cannot be higher than the reading on ${formatDate(nextReading.date)} (${nextReading.value})`;
+  }
 
+  const previousReading = getPreviousReading(date);
+  if (previousReading && numVal < previousReading.value) {
+    return `Cannot be lower than the reading on ${formatDate(previousReading.date)} (${previousReading.value})`;
+  }
+
+  return null;
+};
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');

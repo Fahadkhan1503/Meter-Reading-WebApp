@@ -7,6 +7,44 @@ const monthNames = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
+// export const createReading = async (req, res) => {
+//   try {
+//     const { meterId, value, date, note, source } = req.body;
+
+//     if (!meterId || value === undefined) {
+//       return res.status(400).json({ message: 'meterId and value are required' });
+//     }
+
+//     const meter = await Meter.findOne({ _id: meterId, user: req.user.id });
+//     if (!meter) {
+//       return res.status(404).json({ message: 'Meter not found' });
+//     }
+
+//     const lastReading = await Reading.findOne({ meter: meterId }).sort({ date: -1 });
+
+//     if (lastReading && value < lastReading.value) {
+//       return res.status(400).json({
+//         message: `New reading (${value}) cannot be lower than the last reading (${lastReading.value})`,
+//       });
+//     }
+
+//     const unitsUsed = lastReading ? value - lastReading.value : value - meter.lastBilledReading;
+
+//     const reading = await Reading.create({
+//       meter: meterId,
+//       user: req.user.id,
+//       value,
+//       unitsUsed,
+//       date: date || Date.now(),
+//       note,
+//       source: source === 'photo' ? 'photo' : 'manual',
+//     });
+
+//     res.status(201).json(reading);
+//   } catch (error) {
+//     res.status(500).json({ message: 'Could not save reading', error: error.message });
+//   }
+// };
 export const createReading = async (req, res) => {
   try {
     const { meterId, value, date, note, source } = req.body;
@@ -20,22 +58,42 @@ export const createReading = async (req, res) => {
       return res.status(404).json({ message: 'Meter not found' });
     }
 
-    const lastReading = await Reading.findOne({ meter: meterId }).sort({ date: -1 });
+    const readingDate = date ? new Date(date) : new Date();
 
-    if (lastReading && value < lastReading.value) {
+    // 👇 Check previous reading (before the new date)
+    const previousReading = await Reading.findOne({
+      meter: meterId,
+      date: { $lt: readingDate },
+    }).sort({ date: -1 });
+
+    if (previousReading && value < previousReading.value) {
       return res.status(400).json({
-        message: `New reading (${value}) cannot be lower than the last reading (${lastReading.value})`,
+        message: `New reading (${value}) cannot be lower than the reading on ${previousReading.date.toLocaleDateString()} (${previousReading.value})`,
       });
     }
 
-    const unitsUsed = lastReading ? value - lastReading.value : value - meter.lastBilledReading;
+    // 👇 Check next reading (after the new date)
+    const nextReading = await Reading.findOne({
+      meter: meterId,
+      date: { $gt: readingDate },
+    }).sort({ date: 1 });
+
+    if (nextReading && value > nextReading.value) {
+      return res.status(400).json({
+        message: `New reading (${value}) cannot be higher than the reading on ${nextReading.date.toLocaleDateString()} (${nextReading.value})`,
+      });
+    }
+
+    // Calculate units used
+    const lastReading = previousReading || { value: meter.lastBilledReading };
+    const unitsUsed = value - lastReading.value;
 
     const reading = await Reading.create({
       meter: meterId,
       user: req.user.id,
       value,
       unitsUsed,
-      date: date || Date.now(),
+      date: readingDate,
       note,
       source: source === 'photo' ? 'photo' : 'manual',
     });
