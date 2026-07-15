@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { getMeterById } from '../services/meterService';
-import { createReading, scanReading } from '../services/readingService';
+import { getReadings, createReading, scanReading } from '../services/readingService';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import CycleDial from '../components/CycleDial';
@@ -12,6 +12,8 @@ const numberFieldClasses =
 
 const formatDate = (date) =>
   new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+
+const getToday = () => new Date().toISOString().split('T')[0];
 
 const AddReading = () => {
   const [searchParams] = useSearchParams();
@@ -24,12 +26,14 @@ const AddReading = () => {
   const closeSidebar = () => setIsSidebarOpen(false);
 
   const [meter, setMeter] = useState(null);
+  const [allReadings, setAllReadings] = useState([]);
   const [loadingMeter, setLoadingMeter] = useState(true);
   const [meterError, setMeterError] = useState('');
 
   const [mode, setMode] = useState('manual');
   const [value, setValue] = useState('');
   const [source, setSource] = useState('manual');
+  const [readingDate, setReadingDate] = useState(getToday());
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -43,17 +47,21 @@ const AddReading = () => {
       setLoadingMeter(false);
       return;
     }
-    const loadMeter = async () => {
+    const loadData = async () => {
       try {
-        const data = await getMeterById(meterId);
-        setMeter(data);
+        const [meterData, readingsData] = await Promise.all([
+          getMeterById(meterId),
+          getReadings(meterId),
+        ]);
+        setMeter(meterData);
+        setAllReadings(readingsData);
       } catch (err) {
         setMeterError(err.message);
       } finally {
         setLoadingMeter(false);
       }
     };
-    loadMeter();
+    loadData();
   }, [meterId]);
 
   const resetPhotoState = () => {
@@ -92,18 +100,61 @@ const AddReading = () => {
     }
   };
 
+  const getNextReading = (date) => {
+    // Find the reading with the smallest date > selected date
+    const selected = new Date(date);
+    const laterReadings = allReadings
+      .filter((r) => new Date(r.date) > selected)
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    return laterReadings[0] || null;
+  };
+
+  const validatePastReading = (date, val) => {
+    if (!date || !val) return null;
+
+    const nextReading = getNextReading(date);
+    if (nextReading && Number(val) > nextReading.value) {
+      return `Cannot be higher than the reading on ${formatDate(nextReading.date)} (${nextReading.value})`;
+    }
+    return null;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
+    // Validate reading value
     if (!value || Number(value) < 0) {
       setError('Enter a valid reading value');
       return;
     }
 
+    // Validate date – prevent future dates
+    if (readingDate) {
+      const selected = new Date(readingDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (selected > today) {
+        setError('Cannot add a reading from the future.');
+        return;
+      }
+
+      // Validate against later readings
+      const dateError = validatePastReading(readingDate, Number(value));
+      if (dateError) {
+        setError(dateError);
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
-      await createReading({ meterId, value: Number(value), source });
+      await createReading({
+        meterId,
+        value: Number(value),
+        source,
+        date: readingDate || undefined,
+      });
       navigate('/dashboard');
     } catch (err) {
       setError(err.message);
@@ -187,7 +238,7 @@ const AddReading = () => {
                     <button
                       type="button"
                       onClick={() => handleModeChange('manual')}
-                      className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-medium rounded-[8px] py-2 transition ${
+                      className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-medium rounded-lg py-2 transition ${
                         mode === 'manual' ? 'bg-paper text-ink shadow-sm' : 'text-ink-soft'
                       }`}
                     >
@@ -197,7 +248,7 @@ const AddReading = () => {
                     <button
                       type="button"
                       onClick={() => handleModeChange('photo')}
-                      className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-medium rounded-[8px] py-2 transition ${
+                      className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-medium rounded-lg py-2 transition ${
                         mode === 'photo' ? 'bg-paper text-ink shadow-sm' : 'text-ink-soft'
                       }`}
                     >
@@ -214,7 +265,7 @@ const AddReading = () => {
                     )}
 
                     {mode === 'manual' && (
-                      <div className="mb-2">
+                      <div className="mb-3">
                         <label htmlFor="value" className="block text-sm font-medium text-ink-soft mb-1.5">
                           Meter reading
                         </label>
@@ -231,7 +282,7 @@ const AddReading = () => {
                     )}
 
                     {mode === 'photo' && (
-                      <div className="mb-2">
+                      <div className="mb-3">
                         {!imagePreview && (
                           <button
                             type="button"
@@ -276,7 +327,7 @@ const AddReading = () => {
                         )}
 
                         {scanResult && !scanning && (
-                          <div className="mb-2">
+                          <div className="mb-3">
                             {scanResult.confidence === 'low' && (
                               <div className="flex items-start gap-2 bg-danger-light text-danger text-xs rounded-[10px] px-3 py-2.5 mb-3">
                                 <AlertTriangle size={14} className="mt-0.5 shrink-0" />
@@ -302,10 +353,27 @@ const AddReading = () => {
                       </div>
                     )}
 
+                    {/* Date picker */}
+                    <div className="mb-4">
+                      <label htmlFor="readingDate" className="block text-sm font-medium text-ink-soft mb-1.5">
+                        Reading date
+                      </label>
+                      <input
+                        id="readingDate"
+                        type="date"
+                        value={readingDate}
+                        onChange={(e) => setReadingDate(e.target.value)}
+                        className="w-full border border-line rounded-[10px] px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition bg-paper"
+                      />
+                      <p className="text-xs text-ink-soft mt-1">
+                        Set to today's date for the current reading, or choose a past date if you forgot to log it earlier.
+                      </p>
+                    </div>
+
                     <button
                       type="submit"
                       disabled={submitting || scanning || (mode === 'photo' && !scanResult)}
-                      className="mt-4 w-full flex items-center justify-center gap-1.5 bg-primary text-white font-medium rounded-[10px] py-2.5 hover:bg-primary-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="mt-2 w-full flex items-center justify-center gap-1.5 bg-primary text-white font-medium rounded-[10px] py-2.5 hover:bg-primary-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Check size={16} />
                       {submitting ? 'Saving...' : 'Save reading'}
@@ -314,6 +382,7 @@ const AddReading = () => {
                 </div>
               </div>
 
+              {/* Right panel – Preview */}
               <div className="bg-paper border border-line rounded-[20px] p-6">
                 <p className="font-display font-semibold text-sm text-ink-soft mb-4">
                   {hasValidValue ? 'If you save this' : 'Current standing'}
