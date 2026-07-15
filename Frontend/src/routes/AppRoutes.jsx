@@ -7,12 +7,10 @@ import CreateMeter from '../pages/CreateMeter';
 import ProtectedRoute from './ProtectedRoute';
 import Meters from '../pages/Meters';
 import AddReading from '../pages/AddReading';
-// import MeterDetail from '../pages/MeterDetail';
+import History from '../pages/History';
+import EditMeter from '../pages/EditMeter';
 
-/**
- * "/" sends the user to the right place once we know whether they're
- * logged in — avoids a hardcoded guess before auth has resolved.
- */
+
 const RootRedirect = () => {
   const { user, loading } = useAuth();
   if (loading) return null;
@@ -29,11 +27,8 @@ const AppRoutes = () => {
       <Route path="/meters/new" element={<ProtectedRoute><CreateMeter /></ProtectedRoute>} />
       <Route path="/meters" element={<ProtectedRoute><Meters /></ProtectedRoute>} />
       <Route path="/readings/new" element={<ProtectedRoute><AddReading /></ProtectedRoute>} />
-      {/*
-        / /meters/new, /meters/:id, don't exist yet —
-        Dashboard and Sidebar already link to them, they'll just 404 to
-        /login until those pages are built.
-      */}
+      <Route path="/meters/:id" element={<ProtectedRoute><History /></ProtectedRoute>}/>
+      <Route path="/meters/:id/edit" element={<ProtectedRoute><EditMeter /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
