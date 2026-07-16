@@ -2,11 +2,11 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getMeters, deleteMeter } from "../services/meterService";
-import { getCycleSummary } from "../services/readingService"; // 👈 new import
+import { getCycleSummary } from "../services/readingService"; 
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import { Plus, Eye, Edit, Trash2, Loader2, Pencil, Camera } from "lucide-react";
-
+import ConfirmDialog from "../components/ConfirmDialog"; 
 const Meters = () => {
   const [meters, setMeters] = useState([]);
   const [cycleData, setCycleData] = useState({}); // key: meterId, value: cycle summary
@@ -15,6 +15,8 @@ const Meters = () => {
   const [error, setError] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);  
   const navigate = useNavigate();
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
@@ -75,24 +77,36 @@ const Meters = () => {
     // eslint-disable-next-line
   }, []);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this meter and all its readings?")) return;
-    setDeletingId(id);
-    try {
-      await deleteMeter(id);
-      setMeters((prev) => prev.filter((m) => m._id !== id));
-      // Remove from cycleData
-      setCycleData((prev) => {
-        const newData = { ...prev };
-        delete newData[id];
-        return newData;
-      });
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setDeletingId(null);
-    }
-  };
+  const handleDeleteClick = (id) => {
+        setDeletingId(id);
+        setShowDeleteDialog(true);
+      };
+
+      const confirmDelete = async () => {
+        if (!deletingId) return;
+        setIsDeleting(true);
+        try {
+          await deleteMeter(deletingId);
+          setMeters((prev) => prev.filter((m) => m._id !== deletingId));
+          setCycleData((prev) => {
+            const newData = { ...prev };
+            delete newData[deletingId];
+            return newData;
+          });
+        } catch (err) {
+          setError(err.message);
+        } finally {
+          setIsDeleting(false);
+          setDeletingId(null);
+          setShowDeleteDialog(false);
+        }
+      };
+
+      const cancelDelete = () => {
+        setDeletingId(null);
+        setShowDeleteDialog(false);
+        setIsDeleting(false);
+      };
 
   const getDaysElapsed = (lastBilledDate) => {
     const diff = new Date() - new Date(lastBilledDate);
@@ -174,12 +188,12 @@ const Meters = () => {
                         <Edit size={16} />
                       </Link>
                       <button
-                        onClick={() => handleDelete(meter._id)}
-                        disabled={deletingId === meter._id}
+                        onClick={() => handleDeleteClick(meter._id)}
+                        disabled={isDeleting}
                         className="p-1.5 text-danger/60 hover:text-danger transition rounded-full hover:bg-danger-light/20 disabled:opacity-50"
                         aria-label="Delete meter"
                       >
-                        {deletingId === meter._id ? (
+                        {deletingId === meter._id && isDeleting ? (
                           <Loader2 size={16} className="animate-spin" />
                         ) : (
                           <Trash2 size={16} />
@@ -288,6 +302,15 @@ const Meters = () => {
           )}
         </div>
       </div>
+      <ConfirmDialog
+      isOpen={showDeleteDialog}
+      onClose={cancelDelete}
+      onConfirm={confirmDelete}
+      title="Delete Meter"
+      message="Are you sure you want to delete this meter and all its readings? This action cannot be undone."
+      confirmText="Delete Meter"
+      isLoading={isDeleting}
+    />
     </div>
   );
 };
