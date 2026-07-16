@@ -308,8 +308,8 @@ npm test
 **Muhammad Fahad**
 
 - GitHub: [@Fahadkhan1503](https://github.com/Fahadkhan1503)
-- LinkedIn: [Muhammad Fahad](https://linkedin.com/in/muhammad-fahad-1503)
-- Email: fahad@example.com
+- LinkedIn: [Muhammad Fahad](https://www.linkedin.com/in/muhammad-fahad-678861273/)
+- Email: fahadkhan1503@gmail.com
 
 
 ---
