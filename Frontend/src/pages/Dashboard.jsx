@@ -7,8 +7,9 @@ import Navbar from '../components/Navbar';
 import CycleDial from '../components/CycleDial';
 import CustomSelect from '../components/CustomSelect';
 import UsageGraph from '../components/UsageGraph';
-import { Plus } from 'lucide-react';
-
+import { Plus, Trash2, Loader2 } from 'lucide-react';
+import { deleteReading } from '../services/readingService'; 
+import ConfirmDialog from '../components/ConfirmDialog';
 const msPerDay = 1000 * 60 * 60 * 24;
 
 const formatDate = (date) =>
@@ -75,9 +76,40 @@ const Dashboard = () => {
   const [loadingCycle, setLoadingCycle] = useState(false);
   const [error, setError] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
+  const [deletingId, setDeletingId] = useState(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
   const closeSidebar = () => setIsSidebarOpen(false);
+
+// delete handlers
+const handleDeleteClick = (id) => {
+  setDeletingId(id);
+  setShowDeleteDialog(true);
+};
+
+const confirmDelete = async () => {
+  if (!deletingId) return;
+  setIsDeleting(true);
+  try {
+    await deleteReading(deletingId);
+    // Refresh readings
+    const readingsData = await getReadings(selectedMeterId);
+    setReadings(readingsData.slice(0, 10));
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setIsDeleting(false);
+    setDeletingId(null);
+    setShowDeleteDialog(false);
+  }
+};
+
+const cancelDelete = () => {
+  setDeletingId(null);
+  setShowDeleteDialog(false);
+  setIsDeleting(false);
+};
 
   useEffect(() => {
     const loadMeters = async () => {
@@ -303,9 +335,23 @@ const Dashboard = () => {
                         >
                           <span className="text-ink-soft">{new Date(r.date).toLocaleDateString()}</span>
                           <span className="font-mono font-bold text-ink">{r.value}</span>
-                          <span className="font-mono text-xs text-primary-dark bg-primary-light px-2 py-0.5 rounded-full">
-                            +{r.displayDelta}
-                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className="font-mono text-xs text-primary-dark bg-primary-light px-2 py-0.5 rounded-full">
+                              +{r.displayDelta}
+                            </span>
+                            <button
+                              onClick={() => handleDeleteClick(r._id)}
+                              disabled={isDeleting}
+                              className="text-danger/60 hover:text-danger transition disabled:opacity-50"
+                              aria-label="Delete reading"
+                            >
+                              {deletingId === r._id && isDeleting ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <Trash2 size={14} />
+                              )}
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -317,6 +363,15 @@ const Dashboard = () => {
           )}
         </div>
       </div>
+      <ConfirmDialog
+      isOpen={showDeleteDialog}
+      onClose={cancelDelete}
+      onConfirm={confirmDelete}
+      title="Delete Reading"
+      message="Are you sure you want to delete this reading? This action cannot be undone."
+      confirmText="Delete Reading"
+      isLoading={isDeleting}
+    />
     </div>
   );
 };
