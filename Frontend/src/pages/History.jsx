@@ -1,15 +1,19 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { getMeterById } from '../services/meterService';
-import { getReadings } from '../services/readingService';
-import Navbar from '../components/Navbar';
-import Sidebar from '../components/Sidebar';
-import { ArrowLeft, Pencil, Camera, Plus } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
+import { getMeterById } from "../services/meterService";
+import { getReadings, deleteReading } from "../services/readingService";
+import Navbar from "../components/Navbar";
+import Sidebar from "../components/Sidebar";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { ArrowLeft, Pencil, Camera, Plus, Trash2, Loader2 } from "lucide-react";
 
 const msPerDay = 1000 * 60 * 60 * 24;
 
 const formatDate = (date) =>
-  new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+  new Date(date).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+  });
 
 const groupReadingsByCycle = (readings, meter) => {
   if (!meter?.lastBilledDate || readings.length === 0) return [];
@@ -18,7 +22,9 @@ const groupReadingsByCycle = (readings, meter) => {
   const anchor = new Date(meter.lastBilledDate).getTime();
 
   const getWindowIndex = (date) => {
-    const dayNumber = Math.floor((new Date(date).getTime() - anchor) / msPerDay);
+    const dayNumber = Math.floor(
+      (new Date(date).getTime() - anchor) / msPerDay,
+    );
     return dayNumber <= 0 ? 0 : Math.floor((dayNumber - 1) / cycleDays);
   };
 
@@ -36,7 +42,7 @@ const groupReadingsByCycle = (readings, meter) => {
   let runningBaseline = meter.lastBilledReading;
   const groups = sortedIndexes.map((windowIndex) => {
     const chronological = [...rawGroups.get(windowIndex)].sort(
-      (a, b) => new Date(a.date) - new Date(b.date)
+      (a, b) => new Date(a.date) - new Date(b.date),
     );
 
     const groupBaseline = runningBaseline;
@@ -51,7 +57,7 @@ const groupReadingsByCycle = (readings, meter) => {
 
     const start = new Date(anchor + windowIndex * cycleDays * msPerDay);
     const end = new Date(anchor + (windowIndex + 1) * cycleDays * msPerDay);
-    const monthName = end.toLocaleDateString('en-GB', { month: 'long' });
+    const monthName = end.toLocaleDateString("en-GB", { month: "long" });
     const total = chronological[chronological.length - 1].value - groupBaseline;
 
     const isCurrent = windowIndex === currentWindowIndex;
@@ -59,9 +65,14 @@ const groupReadingsByCycle = (readings, meter) => {
       ? Math.max(1, Math.floor((Date.now() - start.getTime()) / msPerDay))
       : cycleDays;
 
-    const percent = meter.target > 0 ? Math.min(100, Math.round((total / meter.target) * 100)) : 0;
-    const status = meter.target > 0 && total > meter.target ? 'danger' : 'success';
-    const avgPerDay = elapsedDays > 0 ? (total / elapsedDays).toFixed(2) : '0.00';
+    const percent =
+      meter.target > 0
+        ? Math.min(100, Math.round((total / meter.target) * 100))
+        : 0;
+    const status =
+      meter.target > 0 && total > meter.target ? "danger" : "success";
+    const avgPerDay =
+      elapsedDays > 0 ? (total / elapsedDays).toFixed(2) : "0.00";
 
     return {
       key: windowIndex,
@@ -84,8 +95,11 @@ const History = () => {
   const [meter, setMeter] = useState(null);
   const [readings, setReadings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
   const closeSidebar = () => setIsSidebarOpen(false);
@@ -93,7 +107,7 @@ const History = () => {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      setError('');
+      setError("");
       try {
         const [meterData, readingsData] = await Promise.all([
           getMeterById(id),
@@ -110,13 +124,46 @@ const History = () => {
     load();
   }, [id]);
 
+  const handleDeleteClick = (id) => {
+    setDeletingId(id);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingId) return;
+    setIsDeleting(true);
+    try {
+      await deleteReading(deletingId);
+      const [meterData, readingsData] = await Promise.all([
+        getMeterById(id),
+        getReadings(id),
+      ]);
+      setMeter(meterData);
+      setReadings(readingsData);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsDeleting(false);
+      setDeletingId(null);
+      setShowDeleteDialog(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeletingId(null);
+    setShowDeleteDialog(false);
+    setIsDeleting(false);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-surface">
         <Navbar onMenuClick={toggleSidebar} />
         <div className="flex">
           <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
-          <div className="flex-1 min-w-0 px-4 py-10 text-sm text-ink-soft">Loading history...</div>
+          <div className="flex-1 min-w-0 px-4 py-10 text-sm text-ink-soft">
+            Loading history...
+          </div>
         </div>
       </div>
     );
@@ -130,9 +177,12 @@ const History = () => {
           <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
           <div className="flex-1 min-w-0 px-4 py-10">
             <div className="bg-danger-light text-danger text-sm rounded-[10px] px-3 py-2.5 mb-4">
-              {error || 'Meter not found'}
+              {error || "Meter not found"}
             </div>
-            <Link to="/meters" className="text-primary text-sm font-medium hover:underline">
+            <Link
+              to="/meters"
+              className="text-primary text-sm font-medium hover:underline"
+            >
               Back to meters
             </Link>
           </div>
@@ -142,10 +192,13 @@ const History = () => {
   }
 
   const groups = groupReadingsByCycle(readings, meter);
-  const totalUnitsAllTime = readings.length > 0 ? readings[0].value - meter.lastBilledReading : 0;
+  const totalUnitsAllTime =
+    readings.length > 0 ? readings[0].value - meter.lastBilledReading : 0;
   const totalDaysTracked = Math.max(
     1,
-    Math.floor((Date.now() - new Date(meter.lastBilledDate).getTime()) / msPerDay)
+    Math.floor(
+      (Date.now() - new Date(meter.lastBilledDate).getTime()) / msPerDay,
+    ),
   );
   const overallAvgPerDay = (totalUnitsAllTime / totalDaysTracked).toFixed(2);
 
@@ -165,7 +218,9 @@ const History = () => {
             </Link>
 
             <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-              <h1 className="font-display font-semibold text-2xl text-ink">{meter.name}</h1>
+              <h1 className="font-display font-semibold text-2xl text-ink">
+                {meter.name}
+              </h1>
               <Link
                 to={`/readings/new?meterId=${id}`}
                 className="flex items-center gap-1.5 bg-primary text-white text-sm font-medium rounded-[10px] px-3.5 py-2 hover:bg-primary-dark transition"
@@ -181,15 +236,21 @@ const History = () => {
             <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
               <div className="bg-paper border border-line rounded-[14px] p-3.5 sm:p-4">
                 <p className="text-xs text-ink-soft mb-1">Total used</p>
-                <p className="font-display text-xl sm:text-2xl font-bold text-ink tabular-nums">{totalUnitsAllTime}</p>
+                <p className="font-display text-xl sm:text-2xl font-bold text-ink tabular-nums">
+                  {totalUnitsAllTime}
+                </p>
               </div>
               <div className="bg-paper border border-line rounded-[14px] p-3.5 sm:p-4">
                 <p className="text-xs text-ink-soft mb-1">Readings</p>
-                <p className="font-display text-xl sm:text-2xl font-bold text-ink tabular-nums">{readings.length}</p>
+                <p className="font-display text-xl sm:text-2xl font-bold text-ink tabular-nums">
+                  {readings.length}
+                </p>
               </div>
               <div className="bg-paper border border-line rounded-[14px] p-3.5 sm:p-4">
                 <p className="text-xs text-ink-soft mb-1">Avg/day</p>
-                <p className="font-display text-xl sm:text-2xl font-bold text-ink tabular-nums">{overallAvgPerDay}</p>
+                <p className="font-display text-xl sm:text-2xl font-bold text-ink tabular-nums">
+                  {overallAvgPerDay}
+                </p>
               </div>
             </div>
 
@@ -200,18 +261,25 @@ const History = () => {
             ) : (
               <div className="flex flex-col gap-4 sm:gap-6">
                 {groups.map((group) => (
-                  <div key={group.key} className="bg-paper border border-line rounded-[20px] p-4 sm:p-5 lg:p-6">
+                  <div
+                    key={group.key}
+                    className="bg-paper border border-line rounded-[20px] p-4 sm:p-5 lg:p-6"
+                  >
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-medium text-ink">{group.title}</p>
+                          <p className="text-sm font-medium text-ink">
+                            {group.title}
+                          </p>
                           {group.isCurrent && (
                             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary-light text-primary-dark">
                               In progress
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-ink-soft">{group.subtitle}</p>
+                        <p className="text-xs text-ink-soft">
+                          {group.subtitle}
+                        </p>
                       </div>
                       <p className="font-display text-lg sm:text-xl font-bold text-ink tabular-nums mt-1 sm:mt-0">
                         {group.total} units
@@ -223,13 +291,20 @@ const History = () => {
                         className="h-full rounded-full transition-all duration-500"
                         style={{
                           width: `${group.percent}%`,
-                          background: group.status === 'danger' ? 'var(--color-danger)' : 'var(--color-success)',
+                          background:
+                            group.status === "danger"
+                              ? "var(--color-danger)"
+                              : "var(--color-success)",
                         }}
                       />
                     </div>
                     <div className="flex flex-wrap items-center justify-between text-xs text-ink-soft mb-4">
-                      <span>{group.percent}% of {meter.target} target</span>
-                      <span>{group.avgPerDay}/day{group.isCurrent ? ' so far' : ''}</span>
+                      <span>
+                        {group.percent}% of {meter.target} target
+                      </span>
+                      <span>
+                        {group.avgPerDay}/day{group.isCurrent ? " so far" : ""}
+                      </span>
                     </div>
 
                     <div className="border-t border-line pt-1">
@@ -242,18 +317,38 @@ const History = () => {
                             <span className="text-ink-soft text-xs sm:text-sm">
                               {new Date(r.date).toLocaleDateString()}
                             </span>
-                            {r.source === 'photo' ? (
-                              <Camera size={14} className="text-ink-soft shrink-0" />
+                            {r.source === "photo" ? (
+                              <Camera
+                                size={14}
+                                className="text-ink-soft shrink-0"
+                              />
                             ) : (
-                              <Pencil size={14} className="text-ink-soft shrink-0" />
+                              <Pencil
+                                size={14}
+                                className="text-ink-soft shrink-0"
+                              />
                             )}
                           </div>
                           <span className="font-display font-bold text-ink tabular-nums text-sm sm:text-base">
                             {r.value}
                           </span>
-                          <span className="font-mono text-xs text-primary-dark bg-primary-light px-2 py-0.5 rounded-full whitespace-nowrap">
-                            +{r.displayDelta}
-                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className="font-mono text-xs text-primary-dark bg-primary-light px-2 py-0.5 rounded-full whitespace-nowrap">
+                              +{r.displayDelta}
+                            </span>
+                            <button
+                              onClick={() => handleDeleteClick(r._id)}
+                              disabled={isDeleting}
+                              className="text-danger/60 hover:text-danger transition disabled:opacity-50"
+                              aria-label="Delete reading"
+                            >
+                              {deletingId === r._id && isDeleting ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <Trash2 size={14} />
+                              )}
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -264,6 +359,16 @@ const History = () => {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={showDeleteDialog}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Delete Reading"
+        message="Are you sure you want to delete this reading? This action cannot be undone."
+        confirmText="Delete Reading"
+        isLoading={isDeleting}
+      />
     </div>
   );
 };
