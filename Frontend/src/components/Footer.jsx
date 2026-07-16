@@ -29,7 +29,14 @@ const Footer = () => {
         isVisible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-full opacity-0'
       }`}
     >
-      <span className="text-gray-400 block sm:inline">© 2026 MeterClick. Built by <span className="text-primary font-medium">Muhammad Fahad</span></span>
+      <span className="text-gray-400 block sm:inline">© 2026 MeterClick. Built by <a
+          href="https://github.com/Fahadkhan1503"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary font-medium hover:underline transition"
+        >
+          Muhammad Fahad
+        </a></span>
     </footer>
   );
 };
